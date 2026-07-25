@@ -1,0 +1,150 @@
+###############################################################################
+# LANGFUSE APPLICATION CONFIGURATION
+###############################################################################
+langfuse:
+  # Secret key configuration for security and authentication
+  secret:
+    # Generatable via: openssl rand -hex 32
+    encryptionKey: "CHANGE_ME_32_BYTE_HEX_ENCRYPTION_KEY"
+    nextauthSecret: "CHANGE_ME_NEXTAUTH_SECRET"
+    salt: "CHANGE_ME_SALT_SECRET"
+
+  # Web UI & API Gateway
+  web:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+
+  # Async Ingestion Worker (Processes trace queues from Redis)
+  worker:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 75
+
+###############################################################################
+# S3 / BLOB STORAGE (OCI Object Storage Integration)
+###############################################################################
+# Disable internal MinIO to use OCI S3-compatible Object Storage
+minio:
+  enabled: false
+
+s3:
+  enabled: true
+  bucket: "langfuse-traces"
+  region: "us-ashburn-1" # Replace with your OCI region (e.g., eu-frankfurt-1, ap-mumbai-1)
+  endpoint: "https://<your-tenancy-namespace>.compat.objectstorage.<region>.oraclecloud.com"
+  accessKeyId: "YOUR_OCI_CUSTOMER_SECRET_KEY_ID"
+  secretAccessKey: "YOUR_OCI_CUSTOMER_SECRET_KEY"
+  forcePathStyle: true
+
+###############################################################################
+# POSTGRESQL (Stateful transactional data)
+###############################################################################
+postgresql:
+  enabled: true
+  architecture: standalone
+  auth:
+    username: "langfuse"
+    password: "CHANGE_ME_SECURE_POSTGRES_PASSWORD"
+    database: "langfuse"
+  primary:
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+    persistence:
+      enabled: true
+      storageClass: "oci-bv" # OCI Block Volume StorageClass
+      size: 50Gi
+
+###############################################################################
+# CLICKHOUSE (Analytics & Observability storage)
+###############################################################################
+clickhouse:
+  enabled: true
+  # Langfuse requires exactly 1 shard
+  shards: 1
+  replicaCount: 1
+
+  auth:
+    username: "clickhouse"
+    password: "CHANGE_ME_SECURE_CLICKHOUSE_PASSWORD"
+
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi # ClickHouse is memory-intensive for large analytical queries
+
+  persistence:
+    enabled: true
+    storageClass: "oci-bv" # High performance OCI Block Volume
+    size: 100Gi
+
+###############################################################################
+# VALKEY / REDIS (Queue management for ingestion)
+###############################################################################
+valkey:
+  enabled: true
+  architecture: standalone
+  auth:
+    password: "CHANGE_ME_SECURE_REDIS_PASSWORD"
+  primary:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    persistence:
+      enabled: true
+      storageClass: "oci-bv"
+      size: 10Gi
+
+###############################################################################
+# INGRESS & TLS
+###############################################################################
+ingress:
+  enabled: true
+  ingressClassName: "nginx" # Or "oci-native-ingress" depending on your controller
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Required for large JSON trace payloads (e.g., prompt context, multimodal LLM calls)
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+  hosts:
+    - host: "langfuse.yourdomain.com"
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: langfuse-tls
+      hosts:
+        - "langfuse.yourdomain.com"
