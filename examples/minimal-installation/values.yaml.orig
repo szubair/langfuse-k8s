@@ -24,17 +24,7 @@ postgresql:
       adminPasswordKey: postgresql-password
       userPasswordKey: postgresql-password
 
-zookeeper:
-  enabled: false
-
 clickhouse:
-  enabled: true
-  shards: 1
-  replicaCount: 1
-  cluster:
-    enabled: false
-  zookeeper:
-    enabled: false
   auth:
     existingSecret: langfuse
     existingSecretKey: clickhouse-password
