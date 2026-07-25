@@ -1,7 +1,6 @@
 <img width="2400" height="600" alt="hero-b" src="https://github.com/user-attachments/assets/1bf9cde0-e09f-4055-a230-17c5c009af01" />
 
-# langfuse-k8s
-# local k8s setup
+# langfuse-k8s - local setup
 
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/langfuse-k8s)](https://artifacthub.io/packages/search?repo=langfuse-k8s)
 
